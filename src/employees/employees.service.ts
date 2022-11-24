@@ -1,43 +1,33 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Employee, EmployeeStatus, EmployeeTier } from './Employee.model';
+import { EmployeeStatus, EmployeeTier } from './Employee.enum';
 import { v1 as uuid } from 'uuid'
 import { EmployeeSearchDto } from './EmployeeSearch.dto';
 import { EmployeeUpdateDto } from './EmployeeUpdate.dto';
 import { EmployeeCreateDto } from './EmployeeCreate.dto';
 import { Messages } from './Messages.data';
+import { Employee } from './schemas/Employee.schema';
+import { EmployeeRepository } from './Employee.repository';
 
 @Injectable()
 export class EmployeesService {
 
-    private employees: Employee[] = []
+    constructor(private employeeRepository: EmployeeRepository) {
 
-    getAllEmployees(): Employee[] {
-        return this.employees;
     }
 
-    createEmployee(employeeCreateDto: EmployeeCreateDto): Employee {
+    async getAllEmployees(): Promise<Employee[]> {
+        return await this.employeeRepository.findAll()
+    }
 
-        const { firstName,
-            lastName,
-            designation,
-            nearestCity,
-            tier } = employeeCreateDto
-        const employee = {
-            id: uuid(),
-            firstName,
-            lastName,
-            designation,
-            nearestCity,
-            tier,
-            status: EmployeeStatus.ACTIVE
-        }
-        this.employees.push(employee)
-        return employee;
+    async createEmployee(employeeCreateDto: EmployeeCreateDto): Promise<Employee> {
+
+        
+        return await this.employeeRepository.create(employeeCreateDto)
 
     }
 
 
-    employeeSearch(employeeSearchDto: EmployeeSearchDto) {
+    /*employeeSearch(employeeSearchDto: EmployeeSearchDto) {
         const { status, name } = employeeSearchDto;
         let employees = this.getAllEmployees();
         if (status) {
@@ -49,28 +39,32 @@ export class EmployeesService {
             console.log(employees)
         }
         return employees;
-    }
+    }*/
 
-    getEmployeeById(id: string): Employee {
+    async getEmployeeById(id: string): Promise<Employee> {
         const employees = this.getAllEmployees();
-        let employee = employees.find(employee => employee.id === id)
+        let employee = (await employees).find(employee => employee.id === id)
         if (!employee) {
             throw new NotFoundException(`${id} ${Messages.EMPLOYEE_NOT_EXSIST}`)
         }
         return employee
     }
-    updateEmployee(employeeUpdatedto: EmployeeUpdateDto): Employee {
-
-        const { id, city } = employeeUpdatedto;
-        let employee = this.getEmployeeById(id)
-        employee.nearestCity = city
-        return employee;
+    employeeSearch(employeeSearchDto: EmployeeSearchDto) {
+        return this.employeeRepository.findWithFilters(employeeSearchDto);
     }
 
-    deleteEmployee(id: string): boolean {
-        let employees = this.getAllEmployees();
-        this.employees = employees.filter(employee => employee.id != id)
-        return (employees.length != this.employees.length)
+
+    updateEmployee(employeeUpdatedto: EmployeeUpdateDto): Promise<Employee> {
+
+        return this.employeeRepository.update(employeeUpdatedto)
     }
+
+    // async delete(id: string): Promise<boolean> {
+
+    //     let x = await this.employeeRepository.delete(id);
+    //     console.log(x)
+    //     return x;
+
+    // }
 
 }
